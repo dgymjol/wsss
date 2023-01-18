@@ -1,0 +1,10 @@
+*.tar
+*.pt
+*.jpg
+*.png
+
+__pycache__
+
+data/VOCdevkit/VOC2012
+
+!data/VOCdevkit/VOC2012/labels.txt
