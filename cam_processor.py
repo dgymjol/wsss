@@ -19,7 +19,7 @@ import shutil
 from collections import OrderedDict
 import torch.utils.model_zoo as model_zoo
 
-class Processor():
+class CAM_Processor():
 
     def __init__(self, arg):
         self.arg = arg
@@ -157,7 +157,7 @@ class Processor():
         if self.arg.scheduler == 'ReduceLROnPlateau':
             self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'max', patience=5, factor = 0.5, verbose = True)
         elif self.arg.scheduler == 'StepLR':
-            self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=30, gamma=0.5)
+            self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=5, gamma=0.5)
         else:
             raise Exception(f"There is no {self.arg.scheduler}. Add it in load_scheduler() & step argument")
             
@@ -215,10 +215,10 @@ class Processor():
 
         # train_acc = num_correct.detach().cpu().numpy()*100 / num_total
 
-        # if self.arg.scheduler == 'ReduceLROnPlateau':
-        #     self.scheduler.step(np.mean(train_acc))
-        # else:
-        #     self.scheduler.step()
+        if self.arg.scheduler == 'ReduceLROnPlateau':
+            self.scheduler.step(np.mean(train_acc))
+        else:
+            self.scheduler.step()
         
         current_lr = self.optimizer.param_groups[0]['lr']
         self.print_log(f"current lr : {current_lr}")

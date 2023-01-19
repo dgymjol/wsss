@@ -174,6 +174,34 @@ class VOC12ClassificationDataset(VOC12ImageDataset):
 
         return out
 
+class VOC12ClassificationDatasetBASE(VOC12ClassificationDataset):
+    
+    def __init__(self, img_name_list_path, voc12_root,
+                 img_normal=TorchvisionNormalize()):
+        super().__init__(img_name_list_path, voc12_root, img_normal=img_normal)
+
+        self.image_dir = os.path.join(voc12_root, "JPEGImages")
+        self.label_dir = os.path.join(voc12_root, "SegmentationClass")
+
+    def __getitem__(self, idx):
+        name = self.img_name_list[idx]
+        name_str = decode_int_filename(name)
+
+        image_path = os.path.join(self.image_dir, name_str + ".jpg")
+        label_path = os.path.join(self.label_dir, name_str + ".png")
+
+        img = imageio.imread(image_path)
+        gt_mask = np.asarray(Image.open(label_path), dtype=np.int32)
+
+        out_img = self.img_normal(img)
+        out_img = HWC_to_CHW(out_img)
+
+        out = {"name": name_str, "img": out_img, "size": (img.shape[0], img.shape[1]),
+               "gt_mask": torch.from_numpy(gt_mask), "label": torch.from_numpy(self.label_list[idx])}
+        
+        return out
+
+
 class VOC12ClassificationDatasetMSF(VOC12ClassificationDataset):
 
     def __init__(self, img_name_list_path, voc12_root,
@@ -195,15 +223,15 @@ class VOC12ClassificationDatasetMSF(VOC12ClassificationDataset):
             if s == 1:
                 s_img = img
             else:
-                s_img = imutils.pil_rescale(img, s, order=3)
+                s_img = pil_rescale(img, s, order=3)
             s_img = self.img_normal(s_img)
-            s_img = imutils.HWC_to_CHW(s_img)
+            s_img = HWC_to_CHW(s_img)
             ms_img_list.append(np.stack([s_img, np.flip(s_img, -1)], axis=0))
         if len(self.scales) == 1:
             ms_img_list = ms_img_list[0]
 
-        out = {"name": name_str, "image_data": ms_img_list, "size": (img.shape[0], img.shape[1]),
-               "gt_cls": torch.from_numpy(self.label_list[idx])}
+        out = {"name": name_str, "img": ms_img_list, "size": (img.shape[0], img.shape[1]),
+               "label": torch.from_numpy(self.label_list[idx])}
         return out
 
 class VOC12SegmentationDataset(Dataset):
@@ -236,21 +264,21 @@ class VOC12SegmentationDataset(Dataset):
         img = np.asarray(img)
 
         if self.rescale:
-            img, label = imutils.random_scale((img, label), scale_range=self.rescale, order=(3, 0))
+            img, label = random_scale((img, label), scale_range=self.rescale, order=(3, 0))
 
         if self.img_normal:
             img = self.img_normal(img)
 
         if self.hor_flip:
-            img, label = imutils.random_lr_flip((img, label))
+            img, label = random_lr_flip((img, label))
 
         if self.crop_method == "random":
-            img, label = imutils.random_crop((img, label), self.crop_size, (0, 255))
+            img, label = random_crop((img, label), self.crop_size, (0, 255))
         else:
-            img = imutils.top_left_crop(img, self.crop_size, 0)
-            label = imutils.top_left_crop(label, self.crop_size, 255)
+            img = top_left_crop(img, self.crop_size, 0)
+            label = top_left_crop(label, self.crop_size, 255)
 
-        img = imutils.HWC_to_CHW(img)
+        img = HWC_to_CHW(img)
 
         return {'name': name, 'img': img, 'label': label}
 

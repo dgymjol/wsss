@@ -1,6 +1,6 @@
 import argparse
 import yaml
-from processor import Processor
+from cam_processor import CAM_Processor
 
 def get_parser():
     # parameter priority: command line > config > default
@@ -137,5 +137,5 @@ if __name__ == '__main__':
 
     arg = parser.parse_args()
 
-    processor = Processor(arg)
-    processor.start()
+    cam_processor = CAM_Processor(arg)
+    cam_processor.start()
