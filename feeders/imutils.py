@@ -176,13 +176,13 @@ def crf_inference_label(img, labels, t=10, n_labels=21, gt_prob=0.7):
     return np.argmax(np.array(q).reshape((n_labels, h, w)), axis=0)
 
 
-# def get_strided_size(orig_size, stride):
-#     return ((orig_size[0]-1)//stride+1, (orig_size[1]-1)//stride+1)
+def get_strided_size(orig_size, stride):
+    return ((orig_size[0]-1)//stride+1, (orig_size[1]-1)//stride+1)
 
 
-# def get_strided_up_size(orig_size, stride):
-#     strided_size = get_strided_size(orig_size, stride)
-#     return strided_size[0]*stride, strided_size[1]*stride
+def get_strided_up_size(orig_size, stride):
+    strided_size = get_strided_size(orig_size, stride)
+    return strided_size[0]*stride, strided_size[1]*stride
 
 
 # def compress_range(arr):

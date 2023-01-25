@@ -1,4 +1,4 @@
-# python main.py --work-dir work_dir/voc/resnet50 --config ./config/voc/resnet50_cam.yaml
+python main.py --work-dir work_dir/voc/test --config ./config/voc/resnet50_cam_m.yaml
 
 # python evaluation.py --weights work_dir/voc/resnet50:11 --device 0 1 --config config/voc/resnet50_cam_m_eval.yaml
 

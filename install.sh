@@ -1,10 +1,10 @@
-conda create --name irn2 python=3.6 -y 
+conda create --name wsss python=3.8 -y 
 
 conda activate wsss
 
 conda install pytorch==1.9.1 torchvision==0.10.1 torchaudio==0.9.1 -c pytorch -y
 
-pip3 install pandas gpustat matplotlib numpy
+pip install pandas gpustat matplotlib numpy
 
 conda install git wget -y
 

@@ -3,24 +3,20 @@ import numpy as np
 import random
 import sys
 import torch
-from torchvision import transforms, datasets
 from torch.utils.data import DataLoader
-import torch.optim as optim
 import torch.nn as nn
-
-# from sklearn.metrics import top_k_accuracy_score
-from tensorboardX import SummaryWriter
 import time
 import argparse
 import yaml
 import pdb
 import inspect
 import shutil
-from collections import OrderedDict
 import argparse
 import yaml
 from feeders import imutils
 import cv2
+import torch.nn.functional as F
+from chainercv.evaluations import calc_semantic_segmentation_confusion
 
 def get_parser():
     # parameter priority: command line > config > default
@@ -96,6 +92,11 @@ def get_parser():
         default=[],
         nargs='+',
         help='the name of weights which will be ignored in the initialization')
+    parser.add_argument(
+        '--cam-eval-thres',
+        type=float,
+        default=0.15
+    )
 
     parser.add_argument(
         '--device',
@@ -189,7 +190,7 @@ class Processor():
         if self.arg.weights == 'Nothing':
             self.print_log("No pretrained weights loaded")
             # raise Exception("No pretrained weights loaded")
-        else:
+        else: 
             exp_dir, epoch = self.arg.weights.split(':')
             if not os.path.exists(exp_dir):
                 self.print_log(f"Error : the dir doesnt exist {exp_dir}")
@@ -250,81 +251,59 @@ class Processor():
         self.model.eval()
         loss_value = []
 
-        num_correct = 0
-        num_total = 0
-        sum_iou = 0
-
+        preds = []
+        labels = []
         for batch_idx, item in enumerate(self.data_loader['train']) :
             with torch.no_grad():
-                
                 data = item['img'].cuda(self.output_device) # (3, 512, 512)
                 gt_cls = item['label'].cuda(self.output_device) # (num_classes) : multi-label
                 w, h = item['size']
                 size = (w.item(), h.item())
 
                 # forward
-                strided_size = imutils.get_strided_size(size, 4)
+                # strided_size = imutils.get_strided_size(size, 4)
                 strided_up_size = imutils.get_strided_up_size(size, 16)
 
-                outputs = [model(img[0].cuda(non_blocking=True)) # [(20, 18, 32), ]
-                        for img in pack['img']]
+                # forward
+                conf, cams = self.model(data) # (batchsize, num_classes) 
+                loss = self.loss(conf, gt_cls)
+                loss_value.append(loss.data.item())
 
-                strided_cam = torch.sum(torch.stack( # (2, 71, 125)
-                    [F.interpolate(torch.unsqueeze(o, 0), strided_size, mode='bilinear', align_corners=False)[0] for o
-                    in outputs]), 0)
+                conf = conf[0]
+                gt_cls = gt_cls[0]
+                cam = cams[0] # (20, 12, 16)
+                # strided_cam = F.interpolate(torch.unsqueeze(cam, 0), strided_size, mode='bilinear', align_corners=False)[0] #(20, 94, 125)
+                highres_cam = F.interpolate(torch.unsqueeze(cam, 1), strided_up_size, mode='bilinear', align_corners=False)[:, 0, :size[0], :size[1]] #(20, 375, 500)
 
-                highres_cam = [F.interpolate(torch.unsqueeze(o, 1), strided_up_size,
-                                            mode='bilinear', align_corners=False) for o in outputs]
-                highres_cam = torch.sum(torch.stack(highres_cam, 0), 0)[:, 0, :size[0], :size[1]]
+                # classification
+                valid_cat = torch.nonzero(gt_cls)[:, 0]
 
-                valid_cat = torch.nonzero(label)[:, 0]
-
-                strided_cam = strided_cam[valid_cat]
-                strided_cam /= F.adaptive_max_pool2d(strided_cam, (1, 1)) + 1e-5
+                # strided_cam = strided_cam[valid_cat]
+                # strided_cam /= F.adaptive_max_pool2d(strided_cam, (1, 1)) + 1e-5
 
                 highres_cam = highres_cam[valid_cat]
                 highres_cam /= F.adaptive_max_pool2d(highres_cam, (1, 1)) + 1e-5
-                valid_cat = torch.nonzero(gt_cls)[:, 0]
-                n_gt_cls = len(valid_cat)
 
-                # localization
-                cams = cams[0][valid_cat] # (num_gt_classes, 23, 32)
-                cams_min, cams_max = torch.min(cams.reshape(n_gt_cls, -1), dim=1)[0], torch.max(cams.reshape(n_gt_cls, -1), dim=1)[0]
+                # "keys": valid_cat, "cam": strided_cam.cpu(), "high_res": highres_cam.cpu().numpy()
 
-                cams_minus_min = [cam - cam_min for cam, cam_min in zip(cams, cams_min)] # cam - min
-                maxs_minus_min = cams_max - cams_min
-                normalize_cams  = [cam_minus_min/max_minus_min for cam_minus_min, max_minus_min in zip(cams_minus_min, maxs_minus_min)] # cam - min
+                cams = np.pad(highres_cam.cpu().numpy(), ((1, 0), (0, 0), (0, 0)), mode='constant', constant_values=self.arg.cam_eval_thres)
+                keys = np.pad(valid_cat.cpu().numpy() + 1, (1, 0), mode='constant')
+                cls_labels = np.argmax(cams, axis=0)
+                cls_labels = keys[cls_labels]
+                preds.append(cls_labels.copy())
+                labels.append(item['gt_mask'][0].cpu().numpy())
                 
-                cams_image = [np.uint8(255*normalize_cam.detach().cpu().numpy()) for normalize_cam in normalize_cams] 
-                cams_image = [ cv2.resize(cam_image,(int(w), int(h))) for cam_image in cams_image]
-                normalize_cams_image = [ cv2.resize(normalize_cam.detach().cpu().numpy() ,(int(w), int(h))) for normalize_cam in normalize_cams]
+        confusion = calc_semantic_segmentation_confusion(preds, labels)
 
-                test_image_cv = cv2.imread(os.path.join('data/VOCdevkit/VOC2012/JPEGImages', item['name'][0]+ '.jpg'))
-                heatmaps = [ cv2.applyColorMap(gap_image, cv2.COLORMAP_JET) for gap_image in cams_image]
+        gtj = confusion.sum(axis=1)
+        resj = confusion.sum(axis=0)
+        gtjresj = np.diag(confusion)
+        denominator = gtj + resj - gtjresj
+        iou = gtjresj / denominator
 
-                thresholds = [np.max(cam_image) * 0.30 for cam_image in cams_image]
-                breakpoint()
-                thresh_maps = [ cv2.threshold(cam_image, threshold, 255, cv2.THRESH_BINARY)[1] for cam_image, threshold in zip(cams_image, thresholds)]
-                infos = [ cv2.connectedComponentsWithStats(thresh_map) for thresh_map in thresh_maps]
-
-                largest_connected_component_idxs = [np.argmax(info[2][1:, -1]) + 1 for info in infos]# background is most
-
-                thresh_cams = [ np.where(info[1] == idx, normalize_cam_image, 0 ) for info, idx, normalize_cam_image in zip(infos, largest_connected_component_idxs, normalize_cams_image)] #(x, y, width, height)
-                thresh_cams = np.pad(np.array(thresh_cams), ((1, 0), (0, 0), (0, 0)), mode='constant', constant_values=0) # add background mask
-
-
-                keys = np.pad(valid_cat.detach().cpu().numpy() + 1, (1, 0), mode='constant')
-                cls_labels = np.argmax(thresh_cams, axis=0)
-                # cls_labels = keys[cls_labels]
-                # preds.append(cls_labels.copy())
-                
-                # iou = self.IoU(gt_box, pred_box)
-                # sum_iou += iou
+        print({'iou': iou, 'miou': np.nanmean(iou)})
         
-        train_acc = num_correct*100/num_total
-        train_mIoU = sum_iou / num_total
-
-        self.print_log("\t Mean train loss: {:.4f}. Mean train acc: {:.2f}%. mIoU: {:4f}".format(np.mean(loss_value), train_acc, train_mIoU))
+        # self.print_log("\t Mean train loss: {:.4f}. Mean train acc: {:.2f}%. mIoU: {:4f}".format(np.mean(loss_value), train_acc, train_mIoU))
 
     def eval_test(self):
         self.model.eval()
