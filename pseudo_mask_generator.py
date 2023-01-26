@@ -17,6 +17,14 @@ from feeders import imutils
 import cv2
 import torch.nn.functional as F
 from chainercv.evaluations import calc_semantic_segmentation_confusion
+import imageio
+from feeders.imutils import *
+from PIL import Image
+
+palette = [0,0,0,  128,0,0,  0,128,0,  128,128,0,  0,0,128,  128,0,128,  0,128,128,  128,128,128,
+					 64,0,0,  192,0,0,  64,128,0,  192,128,0,  64,0,128,  192,0,128,  64,128,128,  192,128,128,
+					 0,64,0,  128,64,0,  0,192,0,  128,192,0,  0,64,128,  128,64,128,  0,192,128,  128,192,128,
+					 64,64,0,  192,64,0,  64,192,0, 192,192,0]
 
 def get_parser():
     # parameter priority: command line > config > default
@@ -97,7 +105,17 @@ def get_parser():
         type=float,
         default=0.15
     )
-
+    parser.add_argument(
+        '--conf-fg-thres',
+        type=float,
+        default=0.3
+    )
+    parser.add_argument(
+        '--conf-bg-thres',
+        type=float,
+        default=0.05
+    )
+    
     parser.add_argument(
         '--device',
         type=int,
@@ -172,7 +190,7 @@ class Processor():
         self.data_loader['train'] = DataLoader(
                                     dataset=Feeder(**self.arg.train_feeder_args),
                                     batch_size=self.arg.batch_size,
-                                    shuffle=True,
+                                    shuffle=False,
                                     num_workers=self.arg.num_worker)
         self.data_loader['test'] =  DataLoader(
                                     dataset=Feeder(**self.arg.test_feeder_args),
@@ -225,83 +243,109 @@ class Processor():
         with open('{}/result.txt'.format(self.arg.results_dir), 'a') as f:
             print(str, file=f)
 
-    def IoU(self, box1, box2):
-        '''
-            box1 : (x, y, w, h)
-            box2 : (x, y, w, h)
-        '''
+    def _fast_hist(self, label_true, label_pred, n_class):
+        mask = (label_true >= 0) & (label_true < n_class)
+        hist = np.bincount(
+            n_class * label_true[mask].astype(int) + label_pred[mask],
+            minlength=n_class ** 2,
+        ).reshape(n_class, n_class)
+        return hist
 
-        # intersection x1, y1, x2, y2
 
-        # box = (x1, y1, x2, y2)
-        box1_area = box1[2] * box1[3]
-        box2_area = box2[2] * box2[3]
+    def scores(self, label_trues, label_preds, n_class):
+        hist = np.zeros((n_class, n_class))
+        for lt, lp in zip(label_trues, label_preds):
+            hist += self._fast_hist(lt.flatten(), lp.flatten(), n_class)
+        acc = np.diag(hist).sum() / hist.sum()
+        acc_cls = np.diag(hist) / hist.sum(axis=1)
+        acc_cls = np.nanmean(acc_cls)
+        iu = np.diag(hist) / (hist.sum(axis=1) + hist.sum(axis=0) - np.diag(hist))
+        valid = hist.sum(axis=1) > 0  # added
+        mean_iu = np.nanmean(iu[valid])
+        freq = hist.sum(axis=1) / hist.sum()
+        fwavacc = (freq[freq > 0] * iu[freq > 0]).sum()
+        cls_iu = dict(zip(range(n_class), iu))
 
-        # obtain x1, y1, x2, y2 of the intersection
-        x1 = max(box1[0], box2[0])
-        y1 = max(box1[1], box2[1])
-        x2 = min(box1[0] + box1[2], box2[0] + box2[2]) # x + w
-        y2 = min(box1[1] + box1[3], box2[1] + box2[3]) # y + h
-
-        inter = max(0, x2 - x1) * max(0, y2 - y1)
-        iou = inter / (box1_area + box2_area - inter + 1e-7)
-        return iou
+        return {
+            "Pixel Accuracy": acc,
+            "Mean Accuracy": acc_cls,
+            "Frequency Weighted IoU": fwavacc,
+            "Mean IoU": mean_iu,
+            "Class IoU": cls_iu,
+        }
 
     def eval_train(self):
         self.model.eval()
-        loss_value = []
 
         preds = []
         labels = []
         for batch_idx, item in enumerate(self.data_loader['train']) :
             with torch.no_grad():
-                data = item['img'].cuda(self.output_device) # (3, 512, 512)
-                gt_cls = item['label'].cuda(self.output_device) # (num_classes) : multi-label
-                w, h = item['size']
-                size = (w.item(), h.item())
+                data = item['imgs'] # (3, 512, 512)
+                img = item['img']
+                gt_cls = item['label'].cuda(self.output_device)[0] # (num_classes) : multi-label
+                size = item['size']
 
                 # forward
-                # strided_size = imutils.get_strided_size(size, 4)
+                strided_size = imutils.get_strided_size(size, 4)
                 strided_up_size = imutils.get_strided_up_size(size, 16)
 
                 # forward
-                conf, cams = self.model(data) # (batchsize, num_classes) 
-                loss = self.loss(conf, gt_cls)
-                loss_value.append(loss.data.item())
+                outputs = [self.model(img[0].cuda(self.output_device))[1] for img in data]
+                outputs = [ o[0] + o[1].flip(-1) for o in outputs]
 
-                conf = conf[0]
-                gt_cls = gt_cls[0]
-                cam = cams[0] # (20, 12, 16)
-                # strided_cam = F.interpolate(torch.unsqueeze(cam, 0), strided_size, mode='bilinear', align_corners=False)[0] #(20, 94, 125)
-                highres_cam = F.interpolate(torch.unsqueeze(cam, 1), strided_up_size, mode='bilinear', align_corners=False)[:, 0, :size[0], :size[1]] #(20, 375, 500)
+                strided_cam = torch.sum(torch.stack( # (20, 71, 125)
+                    [F.interpolate(torch.unsqueeze(o, 0), strided_size, mode='bilinear', align_corners=False)[0] for o
+                    in outputs]), 0)
+                
 
+                highres_cam = [F.interpolate(torch.unsqueeze(o, 1), strided_up_size,
+                                            mode='bilinear', align_corners=False) for o in outputs]
+                highres_cam = torch.sum(torch.stack(highres_cam, 0), 0)[:, 0, :size[0], :size[1]]
+                
                 # classification
                 valid_cat = torch.nonzero(gt_cls)[:, 0]
 
-                # strided_cam = strided_cam[valid_cat]
-                # strided_cam /= F.adaptive_max_pool2d(strided_cam, (1, 1)) + 1e-5
+                strided_cam = strided_cam[valid_cat]
+                strided_cam /= F.adaptive_max_pool2d(strided_cam, (1, 1)) + 1e-5
 
                 highres_cam = highres_cam[valid_cat]
                 highres_cam /= F.adaptive_max_pool2d(highres_cam, (1, 1)) + 1e-5
 
                 # "keys": valid_cat, "cam": strided_cam.cpu(), "high_res": highres_cam.cpu().numpy()
-
-                cams = np.pad(highres_cam.cpu().numpy(), ((1, 0), (0, 0), (0, 0)), mode='constant', constant_values=self.arg.cam_eval_thres)
                 keys = np.pad(valid_cat.cpu().numpy() + 1, (1, 0), mode='constant')
-                cls_labels = np.argmax(cams, axis=0)
-                cls_labels = keys[cls_labels]
-                preds.append(cls_labels.copy())
-                labels.append(item['gt_mask'][0].cpu().numpy())
+
+                fg_conf_cam = np.pad(highres_cam.cpu().numpy(), ((1, 0), (0, 0), (0, 0)), mode='constant', constant_values=self.arg.conf_fg_thres)
+                fg_conf_cam = np.argmax(fg_conf_cam, axis = 0)
+                pred = crf_inference_label(img[0], fg_conf_cam, n_labels=keys.shape[0])
+                fg_conf = keys[pred]  
                 
-        confusion = calc_semantic_segmentation_confusion(preds, labels)
+                bg_conf_cam = np.pad(highres_cam.cpu().numpy(), ((1, 0), (0, 0), (0, 0)), mode='constant', constant_values=self.arg.conf_bg_thres)
+                bg_conf_cam = np.argmax(bg_conf_cam, axis = 0)
+                pred = crf_inference_label(img[0], bg_conf_cam, n_labels=keys.shape[0])
+                bg_conf = keys[pred]             
+                   
+                # 2. combine confident fg & bg
+                conf = fg_conf.copy()
+                conf[fg_conf == 0] = 255
+                conf[bg_conf + fg_conf == 0] = 0
+                
+                # save final pseudo mask
+                out = Image.fromarray(conf.astype(np.uint8), mode='P')
+                out.putpalette(palette)
+                out.save(os.path.join(os.path.join('pseudo/images', item['name'][0] +  '_palette.png')))
+                imageio.imwrite(os.path.join('data/VOCdevkit/VOC2012/SegmentationPseudoClassAug', item['name'][0] + '.png'), conf.astype(np.uint8))
+                
+                
+        # confusion = calc_semantic_segmentation_confusion(preds, labels)
+        # breakpoint()
+        # gtj = confusion.sum(axis=1)
+        # resj = confusion.sum(axis=0)
+        # gtjresj = np.diag(confusion)
+        # denominator = gtj + resj - gtjresj
+        # iou = gtjresj / denominator
 
-        gtj = confusion.sum(axis=1)
-        resj = confusion.sum(axis=0)
-        gtjresj = np.diag(confusion)
-        denominator = gtj + resj - gtjresj
-        iou = gtjresj / denominator
-
-        print({'iou': iou, 'miou': np.nanmean(iou)})
+        # print({'iou': iou, 'miou': np.nanmean(iou)})
         
         # self.print_log("\t Mean train loss: {:.4f}. Mean train acc: {:.2f}%. mIoU: {:4f}".format(np.mean(loss_value), train_acc, train_mIoU))
 

@@ -177,11 +177,12 @@ class VOC12ClassificationDataset(VOC12ImageDataset):
 class VOC12ClassificationDatasetBASE(VOC12ClassificationDataset):
     
     def __init__(self, img_name_list_path, voc12_root,
-                 img_normal=TorchvisionNormalize()):
+                 img_normal=TorchvisionNormalize(), scales=(1.0,)):
         super().__init__(img_name_list_path, voc12_root, img_normal=img_normal)
 
         self.image_dir = os.path.join(voc12_root, "JPEGImages")
-        self.label_dir = os.path.join(voc12_root, "SegmentationClass")
+        self.label_dir = os.path.join(voc12_root, "SegmentationClassAug")
+        self.scales = scales
 
     def __getitem__(self, idx):
         name = self.img_name_list[idx]
@@ -193,10 +194,19 @@ class VOC12ClassificationDatasetBASE(VOC12ClassificationDataset):
         img = imageio.imread(image_path)
         gt_mask = np.asarray(Image.open(label_path), dtype=np.int32)
 
-        out_img = self.img_normal(img)
-        out_img = HWC_to_CHW(out_img)
+        ms_img_list = []
+        for s in self.scales:
+            if s == 1:
+                s_img = img
+            else:
+                s_img = pil_rescale(img, s, order=3)
+            s_img = self.img_normal(s_img)
+            s_img = HWC_to_CHW(s_img)
+            ms_img_list.append(np.stack([s_img, np.flip(s_img, -1)], axis=0))
+        if len(self.scales) == 1:
+            ms_img_list = ms_img_list[0]
 
-        out = {"name": name_str, "img": out_img, "size": (img.shape[0], img.shape[1]),
+        out = {"name": name_str, "img": np.asarray(img), "imgs": ms_img_list, "size": (img.shape[0], img.shape[1]),
                "gt_mask": torch.from_numpy(gt_mask), "label": torch.from_numpy(self.label_list[idx])}
         
         return out
@@ -296,7 +306,7 @@ class VOC12AffinityDataset(VOC12SegmentationDataset):
     def __getitem__(self, idx):
         out = super().__getitem__(idx)
 
-        reduced_label = imutils.pil_rescale(out['label'], 0.25, 0)
+        reduced_label = pil_rescale(out['label'], 0.25, 0)
 
         out['aff_bg_pos_label'], out['aff_fg_pos_label'], out['aff_neg_label'] = self.extract_aff_lab_func(reduced_label)
 

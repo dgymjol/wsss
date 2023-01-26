@@ -7,8 +7,9 @@ num_worker : 8
 
 feeder: feeders.voc.VOC12ClassificationDatasetBASE
 train_feeder_args:
-  img_name_list_path : ./data/VOCdevkit/voc12/train.txt
+  img_name_list_path : ./data/VOCdevkit/voc12/train_aug.txt
   voc12_root: ./data/VOCdevkit/VOC2012
+  scales : [1.0, 0.5, 1.5, 2.0]
 
 test_feeder_args:
   img_name_list_path : ./data/VOCdevkit/voc12/val.txt

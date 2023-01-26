@@ -1,6 +1,6 @@
 python main.py --work-dir work_dir/voc/test --config ./config/voc/resnet50_cam_m.yaml
 
-# python evaluation.py --weights work_dir/voc/resnet50:11 --device 0 1 --config config/voc/resnet50_cam_m_eval.yaml
+python evaluation.py --weights work_dir/voc/resnet50:15 --device 0 1 --config config/voc/resnet50_cam_m_eval.yaml
 
 lrs=(0.01 0.1 0.001 0.0001)
 
