@@ -4,7 +4,7 @@ This repository contains an implementation of weakly-supervised semantic segment
 
 ![Data](demo.png)
 
-# 
+
 ## Performance
 
 <table>
@@ -23,7 +23,7 @@ This repository contains an implementation of weakly-supervised semantic segment
 &Dagger; Generated through a CRF post-processing of the CAM outputs.<br>
 &Dagger; The result of fully-supervised semantic segmentation using the pseudo mask generated from CAM outputs as annotation.
 
-#
+
 ## Setup
 
 ### Requirements
