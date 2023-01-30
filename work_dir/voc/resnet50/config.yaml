@@ -1,16 +1,15 @@
-# commend line: main.py --work-dir work_dir/voc/resnet50 --config ./config/voc/resnet50_cam.yaml
+# commend line: main.py --work-dir work_dir/voc/resnet50 --config ./config/voc/resnet50_cam_m.yaml --device 0
 
-base_lr: 0.1
-batch_size: 16
-config: ./config/voc/resnet50_cam.yaml
+base_lr: 0.01
+batch_size: 32
+config: ./config/voc/resnet50_cam_m.yaml
 device:
 - 0
-- 1
 feeder: feeders.voc.VOC12ClassificationDataset
 ignore_weights: []
 log_interval: 10
 loss: MultilabelLoss
-model: model.ResNet50_cam.ResNet50_cam
+model: model.ResNet50_cam_m.resnet50
 model_args:
   num_classes: 20
 model_saved_name: resnet50
@@ -23,7 +22,7 @@ save_interval: 10
 scheduler: StepLR
 seed: 2023
 start_epoch: 0
-test_batch_size: 16
+test_batch_size: 32
 test_feeder_args:
   crop_size: 512
   img_name_list_path: ./data/VOCdevkit/voc12/val.txt

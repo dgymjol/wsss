@@ -1,0 +1,52 @@
+work_dir: ./work_dir/cub/resent50_cam
+
+num_epoch: 50
+weights : ResNet_ImageNet
+
+# feeder
+feeder: feeders.voc.VOC12ClassificationDataset
+num_worker : 8
+# labels: /data/VOCdevkit/labels.txt
+
+weights : ResNet_ImageNet
+
+train_feeder_args:
+  img_name_list_path : ./data/VOCdevkit/voc12/train_aug.txt
+  voc12_root: ./data/VOCdevkit/VOC2012
+  resize_long: [320, 640]
+  hor_flip: True
+  crop_size: 512
+  crop_method: "random"
+
+test_feeder_args:
+  img_name_list_path : ./data/VOCdevkit/voc12/val.txt
+  voc12_root: ./data/VOCdevkit/VOC2012
+  crop_size: 512
+
+
+# loss
+loss : MultilabelLoss
+
+# model
+model: model.ResNet50_cam_m.resnet50
+model_args:
+  num_classes: 20
+
+#optim
+optimizer: SGD
+weight_decay: 0.0001
+base_lr: 0.01
+
+# training
+device: [0,1]
+batch_size: 32
+test_batch_size: 32
+
+# scheduler
+scheduler: StepLR
+
+# random seed
+seed: 2023
+
+
+# {'num_workers': 28, 'voc12_root': './data/VOCdevkit/VOC2012', 'train_list': 'voc12/train_aug.txt', 'val_list': 'voc12/val.txt', 'infer_list': 'voc12/train.txt', 'chainer_eval_set': 'train', 'cam_network': 'net.resnet50_cam', 'cam_crop_size': 512, 'cam_batch_size': 16, 'cam_num_epoches': 5, 'cam_learning_rate': 0.1, 'cam_weight_decay': 0.0001, 'cam_eval_thres': 0.15, 'cam_scales': (1.0, 0.5, 1.5, 2.0), 'conf_fg_thres': 0.3, 'conf_bg_thres': 0.05, 'irn_network': 'net.resnet50_irn', 'irn_crop_size': 512, 'irn_batch_size': 32, 'irn_num_epoches': 3, 'irn_learning_rate': 0.1, 'irn_weight_decay': 0.0001, 'beta': 10, 'exp_times': 8, 'ins_seg_bg_thres': 0.25, 'sem_seg_bg_thres': 0.25, 'log_name': 'sample_train_eval', 'cam_weights_name': 'sess/res50_cam.pth', 'irn_weights_name': 'sess/res50_irn.pth', 'cam_out_dir': 'result/cam', 'ir_label_out_dir': 'result/ir_label', 'sem_seg_out_dir': 'result/sem_seg', 'ins_seg_out_dir': 'result/ins_seg', 'train_cam_pass': True, 'make_cam_pass': True, 'eval_cam_pass': True, 'cam_to_ir_label_pass': True, 'train_irn_pass': True, 'make_ins_seg_pass': True, 'eval_ins_seg_pass': True, 'make_sem_seg_pass': True, 'eval_sem_seg_pass': True}

@@ -1,6 +1,6 @@
 import argparse
 import yaml
-from processor import Processor
+from cam_processor import CAM_Processor
 
 def get_parser():
     # parameter priority: command line > config > default
@@ -9,13 +9,13 @@ def get_parser():
 
     parser.add_argument(
         '--work-dir',
-        default='./work_dir/temp')
+        default='work_dir/voc/resnet50')
 
     parser.add_argument('-model_saved_name', default='resnet50')
 
     parser.add_argument(
         '--config',
-        default='./config/cifar100/resnet50.yaml')
+        default='config/voc/resnet50_cam_m.yaml')
 
 
     # visulize and debug
@@ -137,5 +137,5 @@ if __name__ == '__main__':
 
     arg = parser.parse_args()
 
-    processor = Processor(arg)
-    processor.start()
+    cam_processor = CAM_Processor(arg)
+    cam_processor.start()

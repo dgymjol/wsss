@@ -9,3 +9,5 @@ __pycache__
 data/VOCdevkit/VOC2012
 
 !data/VOCdevkit/VOC2012/labels.txt
+
+pseudo

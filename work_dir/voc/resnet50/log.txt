@@ -40,3 +40,94 @@
 [ Wed Jan 18 16:14:21 2023 ] 	 Mean training loss: 0.1081.
 [ Wed Jan 18 16:14:32 2023 ] 	 Mean test loss: 0.1184
 [ Wed Jan 18 16:14:33 2023 ] ** epoch: 10
+[ Wed Jan 25 04:03:38 2023 ] ------------------------
+[ Wed Jan 25 04:03:38 2023 ] Namespace(base_lr=0.01, batch_size=32, config='./config/voc/resnet50_cam_m.yaml', device=[0, 1], feeder='feeders.voc.VOC12ClassificationDataset', ignore_weights=[], log_interval=10, loss='MultilabelLoss', model='model.ResNet50_cam_m.resnet50', model_args={'num_classes': 20}, model_saved_name='resnet50', num_classes=100, num_epoch=50, num_worker=8, optimizer='SGD', save_epoch=30, save_interval=10, scheduler='StepLR', seed=2023, start_epoch=0, test_batch_size=32, test_feeder_args={'img_name_list_path': './data/VOCdevkit/voc12/val.txt', 'voc12_root': './data/VOCdevkit/VOC2012', 'crop_size': 512}, train_feeder_args={'img_name_list_path': './data/VOCdevkit/voc12/train_aug.txt', 'voc12_root': './data/VOCdevkit/VOC2012', 'resize_long': [320, 640], 'hor_flip': True, 'crop_size': 512, 'crop_method': 'random'}, weight_decay=0.0001, weights='ResNet_ImageNet', work_dir='work_dir/voc/resnet50')
+[ Wed Jan 25 04:03:38 2023 ] ------------------------
+[ Wed Jan 25 04:03:38 2023 ] model : 
+[ Wed Jan 25 04:03:39 2023 ] Successful : transfered weights(imageNet)
+[ Wed Jan 25 04:03:50 2023 ] ------------------------
+[ Wed Jan 25 04:03:50 2023 ] Namespace(base_lr=0.01, batch_size=32, config='./config/voc/resnet50_cam_m.yaml', device=[0], feeder='feeders.voc.VOC12ClassificationDataset', ignore_weights=[], log_interval=10, loss='MultilabelLoss', model='model.ResNet50_cam_m.resnet50', model_args={'num_classes': 20}, model_saved_name='resnet50', num_classes=100, num_epoch=50, num_worker=8, optimizer='SGD', save_epoch=30, save_interval=10, scheduler='StepLR', seed=2023, start_epoch=0, test_batch_size=32, test_feeder_args={'img_name_list_path': './data/VOCdevkit/voc12/val.txt', 'voc12_root': './data/VOCdevkit/VOC2012', 'crop_size': 512}, train_feeder_args={'img_name_list_path': './data/VOCdevkit/voc12/train_aug.txt', 'voc12_root': './data/VOCdevkit/VOC2012', 'resize_long': [320, 640], 'hor_flip': True, 'crop_size': 512, 'crop_method': 'random'}, weight_decay=0.0001, weights='ResNet_ImageNet', work_dir='work_dir/voc/resnet50')
+[ Wed Jan 25 04:03:50 2023 ] ------------------------
+[ Wed Jan 25 04:03:50 2023 ] model : 
+[ Wed Jan 25 04:03:51 2023 ] Successful : transfered weights(imageNet)
+[ Wed Jan 25 04:03:54 2023 ] ** epoch: 1
+[ Wed Jan 25 04:07:26 2023 ] current lr : 0.003
+[ Wed Jan 25 04:07:26 2023 ] 	 Mean training loss: 0.1338.
+[ Wed Jan 25 04:07:36 2023 ] 	 Mean test loss: 0.0735
+[ Wed Jan 25 04:07:36 2023 ] ** epoch: 2
+[ Wed Jan 25 04:11:09 2023 ] current lr : 0.0009
+[ Wed Jan 25 04:11:09 2023 ] 	 Mean training loss: 0.0564.
+[ Wed Jan 25 04:11:19 2023 ] 	 Mean test loss: 0.0565
+[ Wed Jan 25 04:11:19 2023 ] ** epoch: 3
+[ Wed Jan 25 04:14:52 2023 ] current lr : 0.00027
+[ Wed Jan 25 04:14:52 2023 ] 	 Mean training loss: 0.0484.
+[ Wed Jan 25 04:15:03 2023 ] 	 Mean test loss: 0.0548
+[ Wed Jan 25 04:15:03 2023 ] ** epoch: 4
+[ Wed Jan 25 04:18:35 2023 ] current lr : 8.1e-05
+[ Wed Jan 25 04:18:35 2023 ] 	 Mean training loss: 0.0462.
+[ Wed Jan 25 04:18:46 2023 ] 	 Mean test loss: 0.0544
+[ Wed Jan 25 04:18:46 2023 ] ** epoch: 5
+[ Wed Jan 25 04:22:18 2023 ] current lr : 2.43e-05
+[ Wed Jan 25 04:22:18 2023 ] 	 Mean training loss: 0.0453.
+[ Wed Jan 25 04:22:29 2023 ] 	 Mean test loss: 0.0554
+[ Wed Jan 25 04:22:29 2023 ] ** epoch: 6
+[ Wed Jan 25 04:26:20 2023 ] current lr : 7.29e-06
+[ Wed Jan 25 04:26:20 2023 ] 	 Mean training loss: 0.0452.
+[ Wed Jan 25 04:26:40 2023 ] 	 Mean test loss: 0.0543
+[ Wed Jan 25 04:26:40 2023 ] ** epoch: 7
+[ Wed Jan 25 04:32:35 2023 ] current lr : 2.187e-06
+[ Wed Jan 25 04:32:35 2023 ] 	 Mean training loss: 0.0458.
+[ Wed Jan 25 04:32:45 2023 ] 	 Mean test loss: 0.0548
+[ Wed Jan 25 04:32:45 2023 ] ** epoch: 8
+[ Wed Jan 25 04:36:18 2023 ] current lr : 6.561e-07
+[ Wed Jan 25 04:36:18 2023 ] 	 Mean training loss: 0.0456.
+[ Wed Jan 25 04:36:28 2023 ] 	 Mean test loss: 0.0554
+[ Wed Jan 25 04:36:28 2023 ] ** epoch: 9
+[ Wed Jan 25 04:40:01 2023 ] current lr : 1.9682999999999997e-07
+[ Wed Jan 25 04:40:01 2023 ] 	 Mean training loss: 0.0446.
+[ Wed Jan 25 04:40:11 2023 ] 	 Mean test loss: 0.0553
+[ Wed Jan 25 04:40:11 2023 ] ** epoch: 10
+[ Wed Jan 25 04:43:44 2023 ] current lr : 5.904899999999999e-08
+[ Wed Jan 25 04:43:44 2023 ] 	 Mean training loss: 0.0450.
+[ Wed Jan 25 04:43:54 2023 ] 	 Mean test loss: 0.0546
+[ Wed Jan 25 04:43:54 2023 ] ** epoch: 11
+[ Wed Jan 25 04:47:27 2023 ] current lr : 1.7714699999999997e-08
+[ Wed Jan 25 04:47:27 2023 ] 	 Mean training loss: 0.0452.
+[ Wed Jan 25 04:47:38 2023 ] 	 Mean test loss: 0.0547
+[ Wed Jan 25 04:47:38 2023 ] ** epoch: 12
+[ Wed Jan 25 04:51:10 2023 ] current lr : 5.314409999999999e-09
+[ Wed Jan 25 04:51:10 2023 ] 	 Mean training loss: 0.0449.
+[ Wed Jan 25 04:51:21 2023 ] 	 Mean test loss: 0.0548
+[ Wed Jan 25 04:51:21 2023 ] ** epoch: 13
+[ Wed Jan 25 04:54:53 2023 ] current lr : 1.5943229999999996e-09
+[ Wed Jan 25 04:54:53 2023 ] 	 Mean training loss: 0.0452.
+[ Wed Jan 25 04:55:04 2023 ] 	 Mean test loss: 0.0550
+[ Wed Jan 25 04:55:04 2023 ] ** epoch: 14
+[ Wed Jan 25 04:58:36 2023 ] current lr : 4.782968999999998e-10
+[ Wed Jan 25 04:58:36 2023 ] 	 Mean training loss: 0.0452.
+[ Wed Jan 25 04:58:47 2023 ] 	 Mean test loss: 0.0558
+[ Wed Jan 25 04:58:47 2023 ] ** epoch: 15
+[ Wed Jan 25 05:02:19 2023 ] current lr : 1.4348906999999995e-10
+[ Wed Jan 25 05:02:19 2023 ] 	 Mean training loss: 0.0442.
+[ Wed Jan 25 05:02:30 2023 ] 	 Mean test loss: 0.0544
+[ Wed Jan 25 05:02:30 2023 ] ** epoch: 16
+[ Wed Jan 25 05:06:02 2023 ] current lr : 4.3046720999999984e-11
+[ Wed Jan 25 05:06:02 2023 ] 	 Mean training loss: 0.0454.
+[ Wed Jan 25 05:06:13 2023 ] 	 Mean test loss: 0.0548
+[ Wed Jan 25 05:06:13 2023 ] ** epoch: 17
+[ Wed Jan 25 05:09:46 2023 ] current lr : 1.2914016299999994e-11
+[ Wed Jan 25 05:09:46 2023 ] 	 Mean training loss: 0.0454.
+[ Wed Jan 25 05:09:56 2023 ] 	 Mean test loss: 0.0550
+[ Wed Jan 25 05:09:56 2023 ] ** epoch: 18
+[ Wed Jan 25 05:13:29 2023 ] current lr : 3.874204889999998e-12
+[ Wed Jan 25 05:13:29 2023 ] 	 Mean training loss: 0.0452.
+[ Wed Jan 25 05:13:39 2023 ] 	 Mean test loss: 0.0553
+[ Wed Jan 25 05:13:39 2023 ] ** epoch: 19
+[ Wed Jan 25 05:17:11 2023 ] current lr : 1.1622614669999994e-12
+[ Wed Jan 25 05:17:11 2023 ] 	 Mean training loss: 0.0449.
+[ Wed Jan 25 05:17:22 2023 ] 	 Mean test loss: 0.0550
+[ Wed Jan 25 05:17:22 2023 ] ** epoch: 20
+[ Wed Jan 25 05:20:54 2023 ] current lr : 3.486784400999998e-13
+[ Wed Jan 25 05:20:54 2023 ] 	 Mean training loss: 0.0453.
+[ Wed Jan 25 05:21:05 2023 ] 	 Mean test loss: 0.0548
+[ Wed Jan 25 05:21:05 2023 ] ** epoch: 21
