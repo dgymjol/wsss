@@ -1,0 +1,18 @@
+Mode: train
+Device:
+    0: NVIDIA GeForce RTX 3090
+Dataset: VOCAug
+    # data: 10582
+    Split: train_aug_pseudo
+    Root: ../wsss/data/VOCdevkit/VOC2012
+Model: DeepLabV2_ResNet101
+    Init: data/models/voc12/deeplabv1_resnet101-imagenet.pth
+    Skip init: aspp.c0.weight
+    Skip init: aspp.c0.bias
+    Skip init: aspp.c1.weight
+    Skip init: aspp.c1.bias
+    Skip init: aspp.c2.weight
+    Skip init: aspp.c2.bias
+    Skip init: aspp.c3.weight
+    Skip init: aspp.c3.bias
+Checkpoint dst: data/models/voc12/deeplabv2_resnet101/train_aug_pseudo

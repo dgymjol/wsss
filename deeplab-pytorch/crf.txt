@@ -1,0 +1,8 @@
+Mode: crf
+# jobs: 128
+Dataset: VOCAug
+    # data: 1449
+    Split: val
+    Root: ../wsss/data/VOCdevkit/VOC2012
+Logit src: data/features/voc12/deeplabv2_resnet101/val/logit
+Score dst: data/scores/voc12/deeplabv2_resnet101/val/scores_crf.json

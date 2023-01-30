@@ -1,0 +1,9 @@
+Mode: test
+Device:
+    0: NVIDIA GeForce RTX 3090
+Dataset: VOCAug
+    # data: 1449
+    Split: val
+    Root: ../wsss/data/VOCdevkit/VOC2012
+Logit dst: data/features/voc12/deeplabv2_resnet101/val/logit
+Score dst: data/scores/voc12/deeplabv2_resnet101/val/scores.json
