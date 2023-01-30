@@ -2,6 +2,7 @@
 *.pt
 *.jpg
 *.png
+!demo.png
 
 __pycache__
 
