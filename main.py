@@ -9,13 +9,13 @@ def get_parser():
 
     parser.add_argument(
         '--work-dir',
-        default='./work_dir/temp')
+        default='work_dir/voc/resnet50')
 
     parser.add_argument('-model_saved_name', default='resnet50')
 
     parser.add_argument(
         '--config',
-        default='./config/cifar100/resnet50.yaml')
+        default='config/voc/resnet50_cam_m.yaml')
 
 
     # visulize and debug

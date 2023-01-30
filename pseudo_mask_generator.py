@@ -14,9 +14,7 @@ import shutil
 import argparse
 import yaml
 from feeders import imutils
-import cv2
 import torch.nn.functional as F
-from chainercv.evaluations import calc_semantic_segmentation_confusion
 import imageio
 from feeders.imutils import *
 from PIL import Image
@@ -37,7 +35,7 @@ def get_parser():
 
     parser.add_argument(
         '--config',
-        default='./config/cub/resnet50_cam_eval.yaml')
+        default='./config/cub/resnet50_cam_m_eval.yaml')
 
 
     # visulize and debug
@@ -276,9 +274,7 @@ class Processor():
 
     def eval_train(self):
         self.model.eval()
-
-        preds = []
-        labels = []
+        
         for batch_idx, item in enumerate(self.data_loader['train']) :
             with torch.no_grad():
                 data = item['imgs'] # (3, 512, 512)
@@ -287,17 +283,11 @@ class Processor():
                 size = item['size']
 
                 # forward
-                strided_size = imutils.get_strided_size(size, 4)
                 strided_up_size = imutils.get_strided_up_size(size, 16)
 
                 # forward
                 outputs = [self.model(img[0].cuda(self.output_device))[1] for img in data]
                 outputs = [ o[0] + o[1].flip(-1) for o in outputs]
-
-                strided_cam = torch.sum(torch.stack( # (20, 71, 125)
-                    [F.interpolate(torch.unsqueeze(o, 0), strided_size, mode='bilinear', align_corners=False)[0] for o
-                    in outputs]), 0)
-                
 
                 highres_cam = [F.interpolate(torch.unsqueeze(o, 1), strided_up_size,
                                             mode='bilinear', align_corners=False) for o in outputs]
@@ -305,9 +295,6 @@ class Processor():
                 
                 # classification
                 valid_cat = torch.nonzero(gt_cls)[:, 0]
-
-                strided_cam = strided_cam[valid_cat]
-                strided_cam /= F.adaptive_max_pool2d(strided_cam, (1, 1)) + 1e-5
 
                 highres_cam = highres_cam[valid_cat]
                 highres_cam /= F.adaptive_max_pool2d(highres_cam, (1, 1)) + 1e-5
@@ -335,70 +322,9 @@ class Processor():
                 out.putpalette(palette)
                 out.save(os.path.join(os.path.join('pseudo/images', item['name'][0] +  '_palette.png')))
                 imageio.imwrite(os.path.join('data/VOCdevkit/VOC2012/SegmentationPseudoClassAug', item['name'][0] + '.png'), conf.astype(np.uint8))
-                
-                
-        # confusion = calc_semantic_segmentation_confusion(preds, labels)
-        # breakpoint()
-        # gtj = confusion.sum(axis=1)
-        # resj = confusion.sum(axis=0)
-        # gtjresj = np.diag(confusion)
-        # denominator = gtj + resj - gtjresj
-        # iou = gtjresj / denominator
-
-        # print({'iou': iou, 'miou': np.nanmean(iou)})
-        
-        # self.print_log("\t Mean train loss: {:.4f}. Mean train acc: {:.2f}%. mIoU: {:4f}".format(np.mean(loss_value), train_acc, train_mIoU))
-
-    def eval_test(self):
-        self.model.eval()
-        loss_value = []
-
-        num_correct = 0
-        num_total = 0
-        sum_iou = 0
-
-        for batch_idx, item in enumerate(self.data_loader['test']) :
-            with torch.no_grad():
-                data = item['image_data'].cuda(self.output_device) # (1, 3, 224, 224)
-                w, h = item['image_size'][0] # (1, 2) : (width, height)
-                gt_cls = item['gt_cls'].cuda(self.output_device) # (1,)
-                gt_box = item['gt_box'][0].numpy() # (1, 4) : (x, y, width, height)
-                conf, gaps = self.model(data)
-
-                # classification
-                _, pred_label = torch.max(conf, 1)
-                loss = self.loss(conf, gt_cls)
-                loss_value.append(loss.data.item())
-                if pred_label == gt_cls.detach() :
-                    num_correct += 1
-                num_total += 1
-
-                # localization
-                gap = gaps[0][pred_label][0] # (14, 14)
-                gap = gap - torch.min(gap)
-                gap = gap / torch.max(gap)
-                gap = gap.detach().cpu().numpy()
-                gap_image = np.uint8(255*gap)
-                cam_image = cv2.resize(gap_image,(int(w), int(h)))
-                threshold = np.max(cam_image) * 0.40
-                # _, thresh_map = cv2.threshold(cam_image, threshold, 255, cv2.THRESH_BINARY)
-                _, thresh_map = cv2.threshold(cam_image, threshold, 255, cv2.THRESH_OTSU)
-
-                cnt, labels, stats, centroids = cv2.connectedComponentsWithStats(thresh_map)
-
-                largest_connected_component_idx = np.argmax(stats[1:, -1]) + 1 # background is most
-                pred_box = stats[largest_connected_component_idx][:-1] #(x, y, width, height)
-
-                iou = self.IoU(gt_box, pred_box)
-                sum_iou += iou
-        test_acc = num_correct * 100 / num_total 
-        test_mIoU = sum_iou / num_total
-
-        self.print_log("\t Mean test loss: {:.4f}. Mean test acc: {:.2f}%. mIoU: {:4f}".format(np.mean(loss_value), test_acc, test_mIoU))
-
+            
     def start(self):
         self.eval_train()
-        # self.eval_test()
 
 if __name__ == '__main__':
     parser = get_parser()
